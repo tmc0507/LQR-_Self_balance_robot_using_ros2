@@ -1,0 +1,145 @@
+clc; clear;
+
+%% ================== THONG SO ROBOT ==================
+m  = 4.25;     % kg      - khoi luong 1 banh/hub
+M  = 26-4.25*2;      % kg      - khoi luong than robot
+Rw = 0.200/2;% m       - ban kinh banh xe
+W  = 0.400;   % m       - khoang cach giua 2 banh
+L  = 0.14;   % m       - khoang cach tu truc banh den trong tam than
+g  = 9.81;    % m/s^2
+
+Jw   = 0.0075;     % kg.m^2  - moment quan tinh banh/lop/vanh
+Jm   = 0.0074;     % kg.m^2  - moment quan tinh rotor motor
+Jpsi = 0.4533;     % kg.m^2  - moment quan tinh than quanh truc nghieng
+Jphi = 0.4021;     % kg.m^2  - moment quan tinh than quanh truc yaw
+
+%% ================== HE SO MA SAT ==================
+fm = 0.01;       % N.m.s/rad
+fw = 0.02;       % N.m.s/rad
+
+%% ================== HE SO RUT GON ==================
+
+k = W/(2*Rw);
+
+a = (2*m + M)*Rw^2 + 2*Jw + 2*Jm;
+
+b = M*L*Rw - 2*Jm;
+
+c = M*L^2 + Jpsi + 2*Jm;
+
+d = (m*W^2)/2 + Jphi + (W^2/(2*Rw^2))*(Jw + Jm);
+
+Delta = a*c - b^2;
+
+%% ================== MA TRAN A ==================
+% State:
+% x = [theta;
+%      theta_dot;
+%      psi;
+%      psi_dot;
+%      phi;
+%      phi_dot]
+%
+% Input:
+% u = [tau_l;
+%      tau_r]
+%
+% tau_l, tau_r la moment banh trai/phai
+
+A22 = (-2*c*(fm + fw) - 2*b*fm)/Delta;
+A23 = -(b*M*g*L)/Delta;
+A24 = (2*fm*(c + b))/Delta;
+
+A42 = (2*b*(fm + fw) + 2*a*fm)/Delta;
+A43 = (a*M*g*L)/Delta;
+A44 = -(2*fm*(a + b))/Delta;
+
+A66 = -(2*k^2*(fm + fw))/d;
+
+A = [0   1     0     0    0   0;
+     0   A22   A23   A24  0   0;
+     0   0     0     1    0   0;
+     0   A42   A43   A44  0   0;
+     0   0     0     0    0   1;
+     0   0     0     0    0   A66];
+
+%% ================== MA TRAN B ==================
+B21 = (c + b)/Delta;
+B22 = (c + b)/Delta;
+
+B41 = -(a + b)/Delta;
+B42 = -(a + b)/Delta;
+
+B61 = k/d;
+B62 = -k/d;
+
+B = [0    0;
+     B21  B22;
+     0    0;
+     B41  B42;
+     0    0;
+     B61  B62];
+%% ================== MA TRAN C, D ==================
+C = eye(6);
+
+D = zeros(6,2);
+%% ================== KIEM TRA DIEU KHIEN DUOC ==================
+
+Co = ctrb(A, B);
+rank_Co = rank(Co);
+
+disp('Rank controllability = ');
+disp(rank_Co);
+
+if rank_Co < 6
+    warning('He chua dieu khien duoc day du 6 state. Kiem tra lai thong so A, B.');
+end
+
+%% ================== CHON Q, R CHO LQR ==================
+% Q phat sai lech state.
+% Thu tu state:
+% theta, theta_dot, psi, psi_dot, phi, phi_dot
+
+Q = diag([ ...
+    0.01, ...     % theta
+    10,  ...     % theta_dot
+    100, ...    % psi - goc nghieng, nen phat lon
+    100, ...     % psi_dot
+    1, ...     % phi - yaw
+    40   ...     % phi_dot
+]);
+
+
+R_lqr = diag([1, 1]);
+
+%% ================== TINH MA TRAN K ==================
+
+[K, S, poles] = lqr(A, B, Q, R_lqr);
+
+disp('Ma tran K = ');
+disp(K);
+
+disp('Cac cuc he kin = ');
+disp(poles);
+%% ================== TRANG THAI BAN DAU ==================
+x0 = [0; 0; deg2rad(10); 0; 0; 0];
+
+%% ================== VAN TOC DAT ==================
+v_ref = 0;                 % m/s
+theta_dot_ref = v_ref/Rw;  % rad/s
+
+omega_ref = 0;          % rad/s
+phi_dot_ref = omega_ref;   % rad/s
+
+
+
+Acl = A - B*K;
+
+disp('Eigenvalues open-loop = ');
+disp(eig(A));
+
+disp('Eigenvalues closed-loop = ');
+disp(eig(Acl));
+
+disp('real part closed-loop = ');
+disp(real(eig(Acl)));
