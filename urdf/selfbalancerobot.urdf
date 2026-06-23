@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="selfbalancerobot">
+  
+  <link name="base_link"/>
+<joint name="base_to_body" type="fixed">
+    <parent link="base_link"/>
+    <child link="body_link"/>
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+</joint>
+
+  <link
+    name="body_link">
+    <inertial>
+      <origin
+        xyz="-0.000659653697 0.000031796103 0.16415"
+        rpy="0 0 0" />
+      <mass
+        value="17" />
+      <inertia
+        ixx="0.028664"
+        ixy="-2.4781E-13"
+        ixz="1.6775E-13"
+        iyy="0.033676"
+        iyz="-4.1184E-05"
+        izz="0.038394" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0.009215146303 0.001475796103 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://selfbalancerobot/meshes/body_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0.009215146303 0.001475796103 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://selfbalancerobot/meshes/body_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="right_wheel_link">
+    <inertial>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="4.25" />
+      <inertia
+        ixx="0.028901"
+        ixy="-5.1356E-19"
+        ixz="1.9979E-19"
+        iyy="0.052771"
+        iyz="0.00020831"
+        izz="0.028903" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0.004999998957 -0.021788653918 -0.000261794776"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://selfbalancerobot/meshes/right_wheel_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.77647 0.75686 0.73725 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder
+          radius="0.1"
+          length="0.06" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_wheel_joint"
+    type="continuous">
+    <origin
+      xyz="0 -0.16 0"
+      rpy="0 0 0" />
+    <parent
+      link="body_link" />
+    <child
+      link="right_wheel_link" />
+    <axis
+      xyz="0 1 0" />
+    <dynamics
+      damping="0.03"
+      friction="0.0" />
+  </joint>
+  <link
+    name="left_wheeL_link">
+    <inertial>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="4.25" />
+      <inertia
+        ixx="0.028901"
+        ixy="5.5774E-18"
+        ixz="-2.3463E-19"
+        iyy="0.052771"
+        iyz="0.00020831"
+        izz="0.028903" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0.004999998957 0.021787552163 0.000261798501"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://selfbalancerobot/meshes/left_wheeL_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.77647 0.75686 0.73725 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder
+          radius="0.1"
+          length="0.06" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_wheeL_joint"
+    type="continuous">
+    <origin
+      xyz="0 0.16 0"
+      rpy="0 0 0" />
+    <parent
+      link="body_link" />
+    <child
+      link="left_wheeL_link" />
+    <axis
+      xyz="0 1 0" />
+    <dynamics
+      damping="0.03"
+      friction="0.0" />
+  </joint>
+  <link
+    name="imu_link">
+    <inertial>
+      <origin
+        xyz="0 1.1083E-05 -0.00127"
+        rpy="0 0 0" />
+      <mass
+        value="0.001524" />
+      <inertia
+        ixx="5.1619E-08"
+        ixy="7.8021E-23"
+        ixz="1.5757E-24"
+        iyy="1.1512E-07"
+        iyz="-4.3614E-10"
+        izz="1.651E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://selfbalancerobot/meshes/imu_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0 0.24706 0.98824 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://selfbalancerobot/meshes/imu_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="imu_joint"
+    type="fixed">
+    <origin
+      xyz="-0.01 8.4903E-05 -0.0088126"
+      rpy="0 0 0" />
+    <parent
+      link="body_link" />
+    <child
+      link="imu_link" />
+  </joint>
+
+  <ros2_control name="selfbalancerobot_system" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="right_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-16</param>
+        <param name="max">16</param>
+      </command_interface>
+      <command_interface name="effort">
+        <param name="min">-15</param>
+        <param name="max">15</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="left_wheeL_joint">
+      <command_interface name="velocity">
+        <param name="min">-16</param>
+        <param name="max">16</param>
+      </command_interface>
+      <command_interface name="effort">
+        <param name="min">-15</param>
+        <param name="max">15</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <gazebo reference="imu_link">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100.0</update_rate>
+      <visualize>true</visualize>
+      <topic>imu</topic>
+      <gz_frame_id>imu_link</gz_frame_id>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="left_wheeL_link">
+    <mu1>2.5</mu1>
+    <mu2>0.8</mu2>
+    <fdir1>1 0 0</fdir1>
+    <slip1>0.01</slip1>
+    <slip2>0.05</slip2>
+    <kp>1000000.0</kp>
+    <kd>1.0</kd>
+    <minDepth>0.001</minDepth>
+    <maxVel>0.1</maxVel>
+  </gazebo>
+
+  <gazebo reference="right_wheel_link">
+    <mu1>2.5</mu1>
+    <mu2>0.8</mu2>
+    <fdir1>1 0 0</fdir1>
+    <slip1>0.01</slip1>
+    <slip2>0.05</slip2>
+    <kp>1000000.0</kp>
+    <kd>1.0</kd>
+    <minDepth>0.001</minDepth>
+    <maxVel>0.1</maxVel>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      filename="gz_ros2_control-system"
+      name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>__ROS2_CONTROL_CONFIG__</parameters>
+    </plugin>
+    <plugin
+      filename="gz-sim-imu-system"
+      name="gz::sim::systems::Imu"/>
+  </gazebo>
+</robot>
