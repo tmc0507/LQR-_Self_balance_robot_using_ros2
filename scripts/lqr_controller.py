@@ -34,13 +34,13 @@ def wrap_to_pi(angle):
 
 def compute_lqr_gain(q_diag, r_diag):
     m = 4.25
-    m_body = 26.0 - 4.25 * 2.0
+    m_body = 17
     rw = 0.200 / 2.0
     wheel_separation = 0.32
-    length_to_com = 0.14
+    length_to_com = 0.16
     gravity = 9.81
 
-    jw = 0.0075
+    jw = 0.05771
     jm = 0.0074
     jpsi = 0.4533
     jphi = 0.4021
@@ -91,7 +91,7 @@ def compute_lqr_gain(q_diag, r_diag):
             [0.0, 0.0],
             [b41, b41],
             [0.0, 0.0],
-            [b61, -b61],
+            [-b61, b61],
         ],
         dtype=float,
     )
@@ -117,11 +117,12 @@ class LqrController(Node):
         self.declare_parameter('torque_limit', 15.0)
         self.declare_parameter('wheel_velocity_limit', 16.0)
         self.declare_parameter('overspeed_brake_gain', 4.0)
-        self.declare_parameter('torque_slew_rate_limit', 80.0)
+        self.declare_parameter('torque_slew_rate_limit', 60.0)
         self.declare_parameter('max_tilt_rad', 0.7)
-        self.declare_parameter('q_diag', [0.01, 10.0, 40.0, 8.0, 1.0, 2.0])
-        self.declare_parameter('r_diag', [10.0, 10.0])
+        self.declare_parameter('q_diag', [0.02, 3.0, 140.0, 28.0, 2.0, 4.0])
+        self.declare_parameter('r_diag', [8.0, 8.0])
         self.declare_parameter('theta_dot_ref', 0.0)
+        self.declare_parameter('theta_dot_ref_slew_rate', 2.0)
         self.declare_parameter('phi_dot_ref', 0.0)
         self.declare_parameter('phi_dot_ref_slew_rate', 0.6)
         self.declare_parameter('yaw_reference_mode', 'rate')
@@ -132,12 +133,6 @@ class LqrController(Node):
         self.declare_parameter('reset_reference_request', False)
         self.declare_parameter('reset_yaw_on_omega_stop', True)
         self.declare_parameter('omega_stop_threshold', 0.02)
-        self.declare_parameter('yaw_rate_brake_gain', 0.0)
-        self.declare_parameter('yaw_rate_brake_limit', 0.0)
-        self.declare_parameter('yaw_torque_feedforward', 0.0)
-        self.declare_parameter('yaw_torque_feedforward_deadband', 0.03)
-        self.declare_parameter('yaw_torque_max', 2.2)
-        self.declare_parameter('yaw_torque_sign', 1.0)
         self.declare_parameter('hold_initial_position', True)
         self.declare_parameter('hold_initial_yaw', True)
         self.declare_parameter('pitch_sign', 1.0)
@@ -155,14 +150,7 @@ class LqrController(Node):
         self.max_tilt_rad = float(self.get_parameter('max_tilt_rad').value)
         self.reset_yaw_on_omega_stop = bool(self.get_parameter('reset_yaw_on_omega_stop').value)
         self.omega_stop_threshold = float(self.get_parameter('omega_stop_threshold').value)
-        self.yaw_rate_brake_gain = float(self.get_parameter('yaw_rate_brake_gain').value)
-        self.yaw_rate_brake_limit = float(self.get_parameter('yaw_rate_brake_limit').value)
-        self.yaw_torque_feedforward = float(self.get_parameter('yaw_torque_feedforward').value)
-        self.yaw_torque_feedforward_deadband = float(
-            self.get_parameter('yaw_torque_feedforward_deadband').value
-        )
-        self.yaw_torque_max = float(self.get_parameter('yaw_torque_max').value)
-        self.yaw_torque_sign = float(self.get_parameter('yaw_torque_sign').value)
+        self.theta_dot_ref_slew_rate = float(self.get_parameter('theta_dot_ref_slew_rate').value)
         self.phi_dot_ref_slew_rate = float(self.get_parameter('phi_dot_ref_slew_rate').value)
         self.phi_ref_kp = float(self.get_parameter('phi_ref_kp').value)
         self.phi_dot_ref_limit = float(self.get_parameter('phi_dot_ref_limit').value)
@@ -192,11 +180,11 @@ class LqrController(Node):
         self.last_time = None
         self.last_torque = np.zeros(2)
         self.previous_phi_dot_ref = 0.0
+        self.filtered_theta_dot_ref = 0.0
         self.filtered_phi_dot_ref = 0.0
         self.last_phi_ref_delta_request_id = int(
             self.get_parameter('phi_ref_delta_request_id').value
         )
-        self.last_yaw_debug_time = 0.0
 
         self.command_pub = self.create_publisher(
             Float64MultiArray,
@@ -306,7 +294,14 @@ class LqrController(Node):
         phi = yaw
         phi_dot = yaw_rate
 
-        theta_dot_ref = float(self.get_parameter('theta_dot_ref').value)
+        theta_dot_ref_target = float(self.get_parameter('theta_dot_ref').value)
+        self.filtered_theta_dot_ref = self.limit_reference_slew_rate(
+            theta_dot_ref_target,
+            self.filtered_theta_dot_ref,
+            self.theta_dot_ref_slew_rate,
+            dt,
+        )
+        theta_dot_ref = self.filtered_theta_dot_ref
         yaw_reference_mode = str(self.get_parameter('yaw_reference_mode').value)
         phi_dot_ref_target = float(self.get_parameter('phi_dot_ref').value)
         phi_ref_delta_request = float(self.get_parameter('phi_ref_delta_request').value)
@@ -349,13 +344,18 @@ class LqrController(Node):
                 f'Omega stopped. Holding current yaw phi_ref={self.phi_ref:.3f}'
             )
 
+        was_initialized = self.references_initialized
         if not self.references_initialized or reset_reference_request:
             if self.hold_initial_position:
                 self.theta_ref = theta
+                if not was_initialized:
+                    self.filtered_theta_dot_ref = theta_dot_ref_target
+                    theta_dot_ref = self.filtered_theta_dot_ref
             if self.hold_initial_yaw:
                 self.phi_ref = phi
-                self.filtered_phi_dot_ref = phi_dot_ref_target
-                phi_dot_ref = self.filtered_phi_dot_ref
+                if not was_initialized:
+                    self.filtered_phi_dot_ref = phi_dot_ref_target
+                    phi_dot_ref = self.filtered_phi_dot_ref
             self.references_initialized = True
             if reset_reference_request:
                 self.set_parameters([
@@ -386,38 +386,6 @@ class LqrController(Node):
             return
 
         torque = -self.torque_sign * (self.k_gain @ error)
-        yaw_rate_error = phi_dot - phi_dot_ref
-        yaw_brake = -self.yaw_torque_sign * self.yaw_rate_brake_gain * yaw_rate_error
-        if self.yaw_rate_brake_limit > 0.0:
-            yaw_brake = float(
-                np.clip(yaw_brake, -self.yaw_rate_brake_limit, self.yaw_rate_brake_limit)
-            )
-        yaw_feedforward = 0.0
-        if abs(phi_dot_ref) > self.yaw_torque_feedforward_deadband:
-            speed_fraction = min(abs(phi_dot_ref) / max(self.phi_dot_ref_limit, 1e-6), 1.0)
-            feedforward_magnitude = self.yaw_torque_feedforward * (0.5 + 0.5 * speed_fraction)
-            yaw_feedforward = (
-                self.yaw_torque_sign
-                * feedforward_magnitude
-                * math.copysign(1.0, phi_dot_ref)
-            )
-        yaw_torque = yaw_brake + yaw_feedforward
-        if self.yaw_torque_max > 0.0:
-            yaw_torque = float(np.clip(yaw_torque, -self.yaw_torque_max, self.yaw_torque_max))
-        torque += np.array([yaw_torque, -yaw_torque])
-
-        now_seconds = now.nanoseconds * 1e-9
-        if (
-            abs(phi_dot_ref) > self.omega_stop_threshold
-            and now_seconds - self.last_yaw_debug_time > 1.0
-        ):
-            self.last_yaw_debug_time = now_seconds
-            self.get_logger().info(
-                f'yaw mode={yaw_reference_mode}, phi={phi:.3f}, phi_ref={self.phi_ref:.3f}, '
-                f'phi_dot={phi_dot:.3f}, phi_dot_ref={phi_dot_ref:.3f}, '
-                f'yaw_torque={yaw_torque:.3f}'
-            )
-
         torque = np.clip(torque, -self.torque_limit, self.torque_limit)
         torque[0] = self.limit_wheel_speed(torque[0], left_vel)
         torque[1] = self.limit_wheel_speed(torque[1], right_vel)
